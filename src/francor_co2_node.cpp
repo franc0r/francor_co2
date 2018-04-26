@@ -39,6 +39,7 @@ ros::Publisher  g_co2_pub;
 void callbackReceiveCan(const francor::motor_controller::CanMsg& msg) {
     francor::CO2DataMsg co2_can_msg;
 
+    // Check for CAN ID
     if(msg.getID() == 0x701) {
       // get raw data from can
       const auto can_raw_data = msg.getData();

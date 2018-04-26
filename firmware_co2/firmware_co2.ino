@@ -100,7 +100,9 @@ void loop() {
     // reference voltage 5 V, ADC resolution 1024 -> 5V / 1025 = 0.005 V = 5 mV
     const uint16_t co2_adc_voltage = analogRead(ADC_CO2_PIN) * 5;
 
-    // calculate ppm from voltage
+    g_can_co2_data._co2_ppm = co2_adc_voltage;
+
+/*    // calculate ppm from voltage
     // 0.4 - 2.0V correlates with 0 - 5000 ppm 
 
     // range voltage
@@ -118,7 +120,7 @@ void loop() {
       // 1.6 V linear range: 5000 / 1.6 V = 5000 / 1600 mV = 3 ppm/mV
       g_can_co2_data._co2_ppm = (co2_adc_voltage-400) * 3;
     }
-
+*/
     // send data on CAN
     sendCO2DataOnCan(); 
   }
