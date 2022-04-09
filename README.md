@@ -32,3 +32,13 @@ The connection between BluePill and the breakout board is shown in the table bel
 The breakout board support two interface types: I2C and SPI. Because I2C needs only two data lines we choose I2C over SPI bus.
 
 ![Wiring](https://github.com/franc0r/francor_co2/blob/devel/docs/img/francor_co2_wiring.png "Wiring")
+
+### Firmware
+
+To build the firmware you have to import the project in the firmware directory into the STM32CubeIDE. You have to use the code generator of CubeMX to generate the driver files, because thei are not checked into this git repository.
+
+Please make sure you have pulled the submodules with:
+```
+git submodule update --init --recursive
+```
+This is necessary, because the BME680 sensors needs Drivers which are imported as submodule from the official [Bosch Sensortec repository](git@github.com:BoschSensortec/BME680_driver.git).

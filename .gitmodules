@@ -1,0 +1,4 @@
+[submodule "firmware/Drivers/BME680"]
+	path = firmware/Drivers/BME680
+	url = https://github.com/BoschSensortec/BME680_driver.git
+	branch = bme680_v3.5.10
