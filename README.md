@@ -30,3 +30,5 @@ The connection between BluePill and the breakout board is shown in the table bel
 |B7|I2C-SDA|I2C data line|
 
 The breakout board support two interface types: I2C and SPI. Because I2C needs only two data lines we choose I2C over SPI bus.
+
+![Wiring](https://github.com/franc0r/francor_co2/blob/devel/docs/img/francor_co2_wiring.png "Wiring")
