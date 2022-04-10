@@ -7,7 +7,8 @@ firmware/Core/Startup
 *.ld
 *.launch
 
-
+__pycache__
 build
 install
 log
+compile_commands.json

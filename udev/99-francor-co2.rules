@@ -1,0 +1,5 @@
+# UDEV Rules for FRANCOR CO2 sensor
+# Installation:
+# sudo cp udev/99-francor-co2.rules /etc/udev/rules.d/
+# sudo udevadm control --reload
+SUBSYSTEM=="tty", ATTRS{manufacturer}=="FRANCOR e.V.", ATTRS{product}=="FRANCOR CO2 VCP", SYMLINK+="ttyCO2Sensor"
