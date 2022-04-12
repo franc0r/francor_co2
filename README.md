@@ -42,3 +42,23 @@ Please make sure you have pulled the submodules with:
 git submodule update --init --recursive
 ```
 This is necessary, because the BME680 sensors needs Drivers which are imported as submodule from the official [Bosch Sensortec repository](git@github.com:BoschSensortec/BME680_driver.git).
+
+
+### UDEV Rule Virtual Com Port
+
+A problem with man VCP devices is that linux will only increment the path /dev/ttyACM0, /dev/ttyACM1, ...
+If you have many VCP devices you dont know which device belongs to which board. To be able to distinguish between the serial devices a UDEV-rule is added to this repository. To install it you have to copy the rule into the udev rules folder of you linux distribution:
+
+```
+// Copy udev rules
+sudo cp udev/99-francor-co2.rules /etc/udev/rules.d/
+
+// Update udev rules
+sudo udevadm control --reload
+
+```
+
+After installing the udev rule you will find the CO2 sensor always at the path 
+```
+/dev/ttyCO2Sensor
+```
