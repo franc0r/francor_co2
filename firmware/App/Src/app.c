@@ -87,7 +87,7 @@ eAppResult_t runApp(void)
          }
 
          char tx_buffer[APP_VCP_TX_BUFFER];
-         sprintf(&tx_buffer[0U], "d|%i|%i|%i|%li|%li|%i|%li\n\r", data.meas_index, data.status, data.temperature,
+         sprintf(&tx_buffer[0U], "d|%i|%i|%i|%li|%li|%i|%li\n", data.meas_index, data.status, data.temperature,
                  data.pressure, data.humidity, data.gas_index, data.gas_resistance);
 
 
