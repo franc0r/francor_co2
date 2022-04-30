@@ -24,21 +24,43 @@
 
 /* Extern variables ----------------------------------------------------------*/
 extern I2C_HandleTypeDef hi2c1;
+extern TIM_HandleTypeDef htim4;
 
 /* Private variables ---------------------------------------------------------*/
-static struct bme680_dev hsensor;
 
+static struct     bme680_dev hsensor;
+static struct     bme680_field_data sensor_data;
+
+static uint32_t sensor_humidity_lst[APP_NUM_AVG_VALUES];
+static uint32_t sensor_avg_humidity;
+static uint32_t sensor_gas_resistance_lst[APP_NUM_AVG_VALUES];
+static uint32_t sensor_avg_gas_resistance;
+static uint32_t sensor_lst_pos;
+
+static uint32_t co2_level;
+static uint32_t humidity_level;
 /* Private function prototypes -----------------------------------------------*/
 
 static eAppResult_t runErrorHandler(const char* desc);
 
 static void resetVariables(void);
+static eAppResult_t initLED(void);
 static void setLEDOn(void);
 static void setLEDOff(void);
 static void toggleLED(void);
 static void showInitLEDSequence(void);
 static eAppResult_t initSensor(void);
 static eAppResult_t configSensor(void);
+
+static void updateLEDTask(void);
+static eAppResult_t updateSensorTask(void);
+
+
+static eAppResult_t updateSensor(void);
+static eAppResult_t readSensorData(void);
+static void processSensorData(void);
+static void sendMeasurementDataToHost(void);
+
 
 eAppResult_t readSensorRegisters(uint8_t dev_id, uint8_t reg_addr, uint8_t* reg_data, uint16_t size);
 eAppResult_t writeSensorRegisters(uint8_t dev_id, uint8_t reg_addr, uint8_t* reg_data, uint16_t size);
@@ -48,6 +70,12 @@ eAppResult_t writeSensorRegisters(uint8_t dev_id, uint8_t reg_addr, uint8_t* reg
 eAppResult_t initApp(void)
 {
    resetVariables();
+
+   if(APP_OK != initLED())
+   {
+      return APP_ERR;
+   }
+
    showInitLEDSequence();
 
    if(APP_OK != initSensor())
@@ -60,40 +88,19 @@ eAppResult_t initApp(void)
       return APP_ERR;
    }
 
+   HAL_Delay(APP_SENSOR_UPDATE_TIME_MS);
+
    return APP_OK;
 }
 
 eAppResult_t runApp(void)
 {
-   uint32_t update_timestamp = HAL_GetTick();
    for (;;)
    {
-      const uint32_t delta_time_ms = HAL_GetTick() - update_timestamp;
-
-      if (delta_time_ms > APP_SENSOR_UPDATE_TIME_MS)
+      updateLEDTask();
+      if (APP_OK != updateSensorTask())
       {
-         struct bme680_field_data data;
-
-         update_timestamp = HAL_GetTick();
-
-         if (BME680_OK != bme680_get_sensor_data(&data, &hsensor))
-         {
-            return APP_ERROR_HANDLER(APP_ERR_BME680_GET_DATA);
-         }
-
-         if (BME680_OK != bme680_set_sensor_mode(&hsensor))
-         {
-            return APP_ERROR_HANDLER(APP_ERR_BME680_SET_SENSOR_MODE);
-         }
-
-         char tx_buffer[APP_VCP_TX_BUFFER];
-         sprintf(&tx_buffer[0U], "d|%i|%i|%i|%li|%li|%i|%li\n", data.meas_index, data.status, data.temperature,
-                 data.pressure, data.humidity, data.gas_index, data.gas_resistance);
-
-
-         CDC_Transmit_FS((uint8_t*)&tx_buffer[0U], strlen(&tx_buffer[0U]));
-
-         toggleLED();
+         return APP_ERR;
       }
 
       __WFI();
@@ -123,21 +130,54 @@ static eAppResult_t runErrorHandler(const char* desc)
 static void resetVariables(void)
 {
    memset(&hsensor, 0, sizeof(hsensor));
+   memset(&sensor_humidity_lst[0U], 0, sizeof(sensor_humidity_lst));
+   memset(&sensor_gas_resistance_lst[0U], 0, sizeof(sensor_gas_resistance_lst));
+
+   sensor_lst_pos = 0U;
+   sensor_avg_humidity = 0U;
+   sensor_avg_gas_resistance = 0U;
+   co2_level = 0U;
+   humidity_level = 0U;
+}
+
+static eAppResult_t initLED(void)
+{
+   HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_4);
+   HAL_TIM_Base_Stop(&htim4);
+
+   if(HAL_OK != HAL_TIM_Base_Start(&htim4))
+   {
+      return APP_ERROR_HANDLER(APP_ERR_LED_INIT_TIM_FAILURE);
+   }
+
+   if(HAL_OK != HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4))
+   {
+      return APP_ERROR_HANDLER(APP_ERR_LED_START_PWM_FAILURE);
+   }
+
+   return APP_OK;
 }
 
 static void setLEDOn(void)
 {
-   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+   htim4.Instance->CCR4 = APP_LED_PWM_MAX_VALUE;
 }
 
 static void setLEDOff(void)
 {
-   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+   htim4.Instance->CCR4 = 0;
 }
 
 static void toggleLED(void)
 {
-   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+   if(htim4.Instance->CCR4 == APP_LED_PWM_MAX_VALUE)
+   {
+      htim4.Instance->CCR4 = 0;
+   }
+   else
+   {
+      htim4.Instance->CCR4 = APP_LED_PWM_MAX_VALUE;
+   }
 }
 
 static void showInitLEDSequence(void)
@@ -195,6 +235,110 @@ static eAppResult_t configSensor(void)
    }
 
    return APP_OK;
+}
+
+static void updateLEDTask(void)
+{
+   static uint32_t update_timestamp = 0U;
+
+   const uint32_t delta_time_ms = HAL_GetTick() - update_timestamp;
+   if(delta_time_ms > APP_LED_UPDATE_TIME_MS)
+   {
+      update_timestamp = HAL_GetTick();
+      if(co2_level > APP_CO2_LED_THRESHOLD)
+      {
+         htim4.Instance->CCR4 = co2_level;
+      }
+      else
+      {
+         htim4.Instance->CCR4 = 0U;
+      }
+   }
+}
+
+static eAppResult_t updateSensorTask(void)
+{
+   static uint32_t update_timestamp = 0U;
+
+   const uint32_t delta_time_ms = HAL_GetTick() - update_timestamp;
+   if (delta_time_ms > APP_SENSOR_UPDATE_TIME_MS)
+   {
+      update_timestamp = HAL_GetTick();
+      if(APP_OK != updateSensor())
+      {
+         return APP_ERR;
+      }
+   }
+
+   return APP_OK;
+}
+
+static eAppResult_t updateSensor(void)
+{
+   eAppResult_t result = APP_ERR;
+
+   if(APP_OK == readSensorData())
+   {
+      processSensorData();
+      sendMeasurementDataToHost();
+      result = APP_OK;
+   }
+
+   return result;
+}
+
+static eAppResult_t readSensorData(void)
+{
+   if (BME680_OK != bme680_get_sensor_data(&sensor_data, &hsensor))
+   {
+      return APP_ERROR_HANDLER(APP_ERR_BME680_GET_DATA);
+   }
+
+   if (BME680_OK != bme680_set_sensor_mode(&hsensor))
+   {
+      return APP_ERROR_HANDLER(APP_ERR_BME680_SET_SENSOR_MODE);
+   }
+
+   return APP_OK;
+}
+
+static void processSensorData(void)
+{
+   /* Calculate average values */
+   sensor_gas_resistance_lst[sensor_lst_pos] = sensor_data.gas_resistance;
+   sensor_humidity_lst[sensor_lst_pos] = sensor_data.humidity;
+
+   for (uint32_t idx = 0U; idx < APP_NUM_AVG_VALUES; idx++)
+   {
+      sensor_avg_humidity += sensor_humidity_lst[idx];
+      sensor_avg_gas_resistance += sensor_gas_resistance_lst[idx];
+   }
+   sensor_avg_humidity /= (APP_NUM_AVG_VALUES+1U);
+   sensor_avg_gas_resistance /= (APP_NUM_AVG_VALUES+1U);
+
+   sensor_lst_pos += 1;
+   if (sensor_lst_pos >= APP_NUM_AVG_VALUES)
+   {
+      sensor_lst_pos = 0U;
+   }
+
+   /* Process data to see if CO2 or humidity changes due to breath detection */
+   co2_level = (uint32_t)(abs((int32_t)(sensor_data.gas_resistance) - (int32_t)(sensor_avg_gas_resistance)) / 10);
+
+   if(co2_level > APP_CO2_LEVEL_MAX)
+   {
+      co2_level = APP_CO2_LEVEL_MAX;
+   }
+}
+
+static void sendMeasurementDataToHost(void)
+{
+   char tx_buffer[APP_VCP_TX_BUFFER ];
+   sprintf(&tx_buffer[0U], "d|%i|%i|%i|%li|%li|%i|%li|%li|%li\n", sensor_data.meas_index, sensor_data.status,
+           sensor_data.temperature, sensor_data.pressure, sensor_data.humidity, sensor_data.gas_index,
+           sensor_data.gas_resistance, sensor_avg_humidity, co2_level);
+
+   CDC_Transmit_FS((uint8_t*) &tx_buffer[0U], strlen(&tx_buffer[0U]));
 }
 
 /* BME680 i2c interface functions --------------------------------------------*/

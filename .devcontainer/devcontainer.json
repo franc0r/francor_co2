@@ -1,0 +1,41 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/ubuntu
+{
+	"name": "FRANCOR ROS2 Base Workspace",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": { "VARIANT": "galactic" },
+	},
+	"runArgs": [
+		"-it",
+		//"--gpus",
+		//"all",
+		"--net=host",
+		"--env=DISPLAY",
+		// "-e",
+		// "QT_X11_NO_MITSHM=1",
+		"--volume=/tmp/.X11-unix:/tmp/.X11-unix:rw",
+	  ],
+	"workspaceMount": "source=${localWorkspaceFolder}/../,target=/home/user/ros2_ws/src/,type=bind",
+	"workspaceFolder": "/home/user/ros2_ws/src/${localWorkspaceFolderBasename}",
+	"remoteUser": "user",
+	"extensions": [
+	  "ms-vscode.cpptools",
+	  "ms-vscode.cpptools-linux",
+	  "ms-vscode.cmake-tools",
+	  "ms-vscode.cpptools-extension-pack",
+	  "llvm-vs-code-extensions.vscode-clangd", 
+	  "xaver.clang-format",
+	  "ms-python.python",
+	  "ms-azuretools.vscode-docker",
+	  "ms-vscode-remote.remote-containers",
+	  "vscode-icons-team.vscode-icons",
+	  "editorconfig.editorconfig",
+	  "eamodio.gitlens",
+	  "xaver.clang-format",
+	  "streetsidesoftware.code-spell-checker",
+	  "cschlosser.doxdocgen",
+	  "yzhang.markdown-all-in-one",
+	  "streetsidesoftware.code-spell-checker"
+	]
+}
