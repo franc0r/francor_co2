@@ -247,7 +247,7 @@ static void updateLEDTask(void)
       update_timestamp = HAL_GetTick();
       if(co2_level > APP_CO2_LED_THRESHOLD)
       {
-         htim4.Instance->CCR4 = co2_level;
+         htim4.Instance->CCR4 = (co2_level / 10U);
       }
       else
       {
@@ -323,7 +323,7 @@ static void processSensorData(void)
    }
 
    /* Process data to see if CO2 or humidity changes due to breath detection */
-   co2_level = (uint32_t)(abs((int32_t)(sensor_data.gas_resistance) - (int32_t)(sensor_avg_gas_resistance)) / 10);
+   co2_level = (uint32_t)(abs((int32_t)(sensor_data.gas_resistance) - (int32_t)(sensor_avg_gas_resistance)) / 2U);
 
    if(co2_level > APP_CO2_LEVEL_MAX)
    {
