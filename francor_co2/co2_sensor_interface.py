@@ -4,6 +4,7 @@ import serial
 from rclpy.node import Node
 
 from std_msgs.msg import Float32
+from rclpy import qos
 
 class MeasurementData:
     def __init__(self):
@@ -85,14 +86,14 @@ class CO2Interface(Node):
         self._serial_name = rclpy.parameter.Parameter(
             'serial_name',
             rclpy.Parameter.Type.STRING,
-            '/dev/ttyCO2Sensor'
+            '/dev/ttyACM0'
         )
 
     def __createTimers(self):
         self._timer = self.create_timer(1.0 / self._update_rate_hz.value, self.update)
 
     def __createPublishers(self):
-        self._co2_publisher = self.create_publisher(Float32, 'co2_level', 10)
+        self._co2_publisher = self.create_publisher(Float32, 'co2_level', qos_profile=qos.qos_profile_sensor_data)
 
 def main(args=None):
     rclpy.init(args=args)
