@@ -55,6 +55,7 @@ class CO2Interface(Node):
                 self._state = 0
         elif self._state == 1:
             try:
+                self._serial.reset_input_buffer()
                 rx_msg = self._serial.readline().decode()
                 self._data.convertFromString(rx_msg)
                 self.get_logger().info("%s | CO2-Level: %f" % (self._data.getInfoString(), self._data.getCO2Level()))
@@ -68,7 +69,7 @@ class CO2Interface(Node):
 
     def __readParams(self):
         self.declare_parameter('update_rate_hz', 10.0)
-        self.declare_parameter('serial_timeout', 2.0)
+        self.declare_parameter('serial_timeout_sec', 2.0)
         self.declare_parameter('serial_name', '/dev/ttyCO2sensor')
 
         self._update_rate_hz = rclpy.parameter.Parameter(
@@ -78,7 +79,7 @@ class CO2Interface(Node):
         )
 
         self._serial_timeout = rclpy.parameter.Parameter(
-            'serial_timeout',
+            'serial_timeout_sec',
             rclpy.Parameter.Type.DOUBLE,
             2.0
         )
@@ -86,7 +87,7 @@ class CO2Interface(Node):
         self._serial_name = rclpy.parameter.Parameter(
             'serial_name',
             rclpy.Parameter.Type.STRING,
-            '/dev/ttyACM0'
+            '/dev/ttyCO2Sensor'
         )
 
     def __createTimers(self):
