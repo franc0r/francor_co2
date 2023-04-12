@@ -69,7 +69,7 @@ class CO2Interface(Node):
 
     def __readParams(self):
         self.declare_parameter('update_rate_hz', 10.0)
-        self.declare_parameter('serial_timeout', 2.0)
+        self.declare_parameter('serial_timeout_sec', 2.0)
         self.declare_parameter('serial_name', '/dev/ttyCO2sensor')
 
         self._update_rate_hz = rclpy.parameter.Parameter(
@@ -79,7 +79,7 @@ class CO2Interface(Node):
         )
 
         self._serial_timeout = rclpy.parameter.Parameter(
-            'serial_timeout',
+            'serial_timeout_sec',
             rclpy.Parameter.Type.DOUBLE,
             2.0
         )
