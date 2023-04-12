@@ -55,6 +55,7 @@ class CO2Interface(Node):
                 self._state = 0
         elif self._state == 1:
             try:
+                self._serial.reset_input_buffer()
                 rx_msg = self._serial.readline().decode()
                 self._data.convertFromString(rx_msg)
                 self.get_logger().info("%s | CO2-Level: %f" % (self._data.getInfoString(), self._data.getCO2Level()))
@@ -86,7 +87,7 @@ class CO2Interface(Node):
         self._serial_name = rclpy.parameter.Parameter(
             'serial_name',
             rclpy.Parameter.Type.STRING,
-            '/dev/ttyACM0'
+            '/dev/ttyCO2Sensor'
         )
 
     def __createTimers(self):
